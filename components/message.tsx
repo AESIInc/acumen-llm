@@ -30,6 +30,7 @@ import {
   type AIToolStatus,
 } from './ui/kibo-ui/ai/tool';
 import { ScreenshotPreview } from './screenshot-preview';
+import { AIResponse } from './ui/kibo-ui/ai/response';
 
 // Type narrowing is handled by TypeScript's control flow analysis
 // The AI SDK provides proper discriminated unions for tool calls
@@ -160,14 +161,14 @@ const PurePreviewMessage = ({
                         {message.role === 'user' ? (
                           <ScrapingMessage text={sanitizeText(part.text)} />
                         ) : (
-                          <Markdown>
+                          <AIResponse>
                             {sanitizeText(
                               part.text.replace(
                                 /\n\n\*\*Screenshot Preview:\*\*\n\n\[\!\[Screenshot[^\]]*\]\([^)]+\)\]\([^)]+\)\n\n\*Click the image above to view the full screenshot in a new tab\*/g,
                                 '',
                               ),
                             )}
-                          </Markdown>
+                          </AIResponse>
                         )}
                       </div>
                     </div>

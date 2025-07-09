@@ -16,12 +16,13 @@ import {
   CodeBlockSelectItem,
   CodeBlockSelectTrigger,
   CodeBlockSelectValue,
-} from '@repo/code-block';
+} from '@/components/ui/kibo-ui/code-block';
 import type { HTMLAttributes } from 'react';
 import { memo } from 'react';
 import ReactMarkdown, { type Options } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { cn } from '@/lib/utils';
+import { ScreenshotPreview } from '@/components/screenshot-preview';
 
 export type AIResponseProps = HTMLAttributes<HTMLDivElement> & {
   options?: Options;
@@ -131,7 +132,7 @@ const components: Options['components'] = {
       >
         <CodeBlockHeader>
           <CodeBlockFiles>
-            {(item) => (
+            {(item: any) => (
               <CodeBlockFilename key={item.language} value={item.language}>
                 {item.filename}
               </CodeBlockFilename>
@@ -142,7 +143,7 @@ const components: Options['components'] = {
               <CodeBlockSelectValue />
             </CodeBlockSelectTrigger>
             <CodeBlockSelectContent>
-              {(item) => (
+              {(item: any) => (
                 <CodeBlockSelectItem key={item.language} value={item.language}>
                   {item.language}
                 </CodeBlockSelectItem>
@@ -155,7 +156,7 @@ const components: Options['components'] = {
           />
         </CodeBlockHeader>
         <CodeBlockBody>
-          {(item) => (
+          {(item: any) => (
             <CodeBlockItem key={item.language} value={item.language}>
               <CodeBlockContent language={item.language as BundledLanguage}>
                 {item.code}
@@ -166,6 +167,27 @@ const components: Options['components'] = {
       </CodeBlock>
     );
   },
+  img: ({ node, src, alt, ...props }) => {
+    // Check if this is a Firecrawl screenshot based on the URL pattern
+    const isFirecrawlScreenshot =
+      src?.includes('firecrawl') || alt?.includes('Screenshot');
+
+    if (isFirecrawlScreenshot && src) {
+      return <ScreenshotPreview src={src} alt={alt || 'Screenshot'} />;
+    }
+
+    // Default image handling
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      // biome-ignore lint/a11y/useAltText: <explanation>
+      <img
+        src={src}
+        alt={alt || 'Image'}
+        className="max-w-full h-auto rounded-lg my-4"
+        {...props}
+      />
+    );
+  },
 };
 
 export const AIResponse = memo(
@@ -173,7 +195,7 @@ export const AIResponse = memo(
     <div
       className={cn(
         'size-full [&>*:first-child]:mt-0 [&>*:last-child]:mb-0',
-        className
+        className,
       )}
       {...props}
     >
@@ -186,5 +208,5 @@ export const AIResponse = memo(
       </ReactMarkdown>
     </div>
   ),
-  (prevProps, nextProps) => prevProps.children === nextProps.children
+  (prevProps, nextProps) => prevProps.children === nextProps.children,
 );
