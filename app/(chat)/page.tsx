@@ -17,7 +17,7 @@ export default async function Page() {
   const id = generateUUID();
 
   const cookieStore = await cookies();
-  const modelIdFromCookie = cookieStore.get('chat-model');
+  const modelIdFromCookie = cookieStore.get('cloud-model-gemini-flash');
 
   if (!modelIdFromCookie) {
     return (

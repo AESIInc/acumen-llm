@@ -40,7 +40,7 @@ export default async function Page(props: { params: Promise<{ id: string }> }) {
   const uiMessages = convertToUIMessages(messagesFromDb);
 
   const cookieStore = await cookies();
-  const chatModelFromCookie = cookieStore.get('chat-model');
+  const chatModelFromCookie = cookieStore.get('cloud-model-gemini-flash');
 
   if (!chatModelFromCookie) {
     return (

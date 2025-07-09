@@ -376,7 +376,7 @@ function PureStopButton({
       onClick={(event) => {
         event.preventDefault();
         stop();
-        setMessages((messages) => messages);
+        setMessages((messages: ChatMessage[]) => messages);
       }}
     >
       <StopIcon size={14} />

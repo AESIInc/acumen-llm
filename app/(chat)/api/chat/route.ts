@@ -157,7 +157,7 @@ export async function POST(request: Request) {
           messages: convertToModelMessages(uiMessages),
           stopWhen: stepCountIs(5),
           experimental_activeTools:
-            selectedChatModel === 'chat-model-reasoning'
+            selectedChatModel === 'secure-model-pro'
               ? []
               : [
                   'getWeather',
@@ -222,6 +222,12 @@ export async function POST(request: Request) {
     if (error instanceof ChatSDKError) {
       return error.toResponse();
     }
+    
+    // Log the error for debugging
+    console.error('Unexpected error in chat API:', error);
+    
+    // Return a generic error response for any other errors
+    return new ChatSDKError('bad_request:api').toResponse();
   }
 }
 

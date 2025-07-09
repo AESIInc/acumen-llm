@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/sidebar';
 import Link from 'next/link';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
+import Image from 'next/image';
 
 export function AppSidebar({ user }: { user: User | undefined }) {
   const router = useRouter();
@@ -34,9 +35,13 @@ export function AppSidebar({ user }: { user: User | undefined }) {
               }}
               className="flex flex-row gap-3 items-center"
             >
-              <span className="text-lg font-semibold px-2 hover:bg-muted rounded-md cursor-pointer">
-                Chatbot
-              </span>
+              <Image
+                src="https://www.aesi-inc.com/AesiLogo/TRANSPARENT-LANDSCAPE-WHITE.svg"
+                alt="Logo"
+                width={125}
+                height={65}
+                className=""
+              />
             </Link>
             <Tooltip>
               <TooltipTrigger asChild>

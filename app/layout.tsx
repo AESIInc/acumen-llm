@@ -12,10 +12,6 @@ export const metadata: Metadata = {
   description: 'Next.js chatbot template using the AI SDK.',
 };
 
-export const viewport = {
-  maximumScale: 1, // Disable auto-zoom on mobile Safari
-};
-
 const geist = Geist({
   subsets: ['latin'],
   display: 'swap',
@@ -70,7 +66,7 @@ export default async function RootLayout({
           }}
         />
       </head>
-      <body className="antialiased">
+      <body suppressHydrationWarning className="antialiased">
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
