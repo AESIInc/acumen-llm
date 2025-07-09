@@ -21,6 +21,8 @@ import { PreviewAttachment } from './preview-attachment';
 import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
 import { SuggestedActions } from './suggested-actions';
+import { ScrapingPopover } from './scraping-popover';
+import { ScrapingBadge } from './scraping-badge';
 import equal from 'fast-deep-equal';
 import type { UseChatHelpers } from '@ai-sdk/react';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -28,6 +30,18 @@ import { ArrowDown } from 'lucide-react';
 import { useScrollToBottom } from '@/hooks/use-scroll-to-bottom';
 import type { VisibilityType } from './visibility-selector';
 import type { Attachment, ChatMessage } from '@/lib/types';
+
+interface ScrapeOptions {
+  url: string;
+  action: 'scrape' | 'crawl' | 'map' | 'search';
+  topic?: string;
+  formats: Array<'markdown' | 'html' | 'json'>;
+  screenshot: 'none' | 'screenshot' | 'screenshot@fullPage';
+  limit: number;
+  includeSelectors: string[];
+  excludeSelectors: string[];
+  maxAge: number;
+}
 
 function PureMultimodalInput({
   chatId,
@@ -58,6 +72,9 @@ function PureMultimodalInput({
 }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { width } = useWindowSize();
+  const [scrapeOptions, setScrapeOptions] = useState<ScrapeOptions | null>(
+    null,
+  );
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -111,23 +128,72 @@ function PureMultimodalInput({
   const submitForm = useCallback(() => {
     window.history.replaceState({}, '', `/chat/${chatId}`);
 
+    const parts = [
+      ...attachments.map((attachment) => ({
+        type: 'file' as const,
+        url: attachment.url,
+        name: attachment.name,
+        mediaType: attachment.contentType,
+      })),
+      {
+        type: 'text' as const,
+        text: input,
+      },
+    ];
+
+    // Add scraping instructions if scrape options are set
+    if (scrapeOptions) {
+      // Format the action description
+      const actionDescription =
+        scrapeOptions.action === 'search'
+          ? `Search for "${scrapeOptions.topic}"`
+          : `${scrapeOptions.action} ${scrapeOptions.url}`;
+
+      // Format options
+      const options = [];
+      if (scrapeOptions.screenshot !== 'none') {
+        options.push('with screenshot');
+      }
+      if (
+        scrapeOptions.formats.length > 0 &&
+        !scrapeOptions.formats.includes('markdown')
+      ) {
+        options.push(`as ${scrapeOptions.formats.join(', ')}`);
+      }
+      if (scrapeOptions.limit !== 10) {
+        options.push(`(limit: ${scrapeOptions.limit})`);
+      }
+
+      const optionsText = options.length > 0 ? ` ${options.join(' ')}` : '';
+
+      const scrapingInstruction = `${actionDescription}${optionsText}
+
+${input}
+
+Please use the getScrape tool with these parameters:
+- URL: ${scrapeOptions.url}
+- Action: ${scrapeOptions.action}
+- Topic: ${scrapeOptions.topic || 'N/A'}
+- Formats: ${scrapeOptions.formats.join(', ')}
+- Screenshot: ${scrapeOptions.screenshot}
+- Limit: ${scrapeOptions.limit}
+- Include selectors: ${scrapeOptions.includeSelectors.join(', ') || 'None'}
+- Exclude selectors: ${scrapeOptions.excludeSelectors.join(', ') || 'None'}
+- Max Age: ${scrapeOptions.maxAge} ms (${scrapeOptions.maxAge === 0 ? 'no caching' : '24hr cache'})`;
+
+      parts[parts.length - 1] = {
+        type: 'text' as const,
+        text: scrapingInstruction,
+      };
+    }
+
     sendMessage({
       role: 'user',
-      parts: [
-        ...attachments.map((attachment) => ({
-          type: 'file' as const,
-          url: attachment.url,
-          name: attachment.name,
-          mediaType: attachment.contentType,
-        })),
-        {
-          type: 'text',
-          text: input,
-        },
-      ],
+      parts,
     });
 
     setAttachments([]);
+    setScrapeOptions(null);
     setLocalStorageInput('');
     resetHeight();
     setInput('');
@@ -139,12 +205,28 @@ function PureMultimodalInput({
     input,
     setInput,
     attachments,
+    scrapeOptions,
     sendMessage,
     setAttachments,
     setLocalStorageInput,
     width,
     chatId,
   ]);
+
+  const handleScrape = useCallback(
+    (options: ScrapeOptions) => {
+      setScrapeOptions(options);
+
+      if (width && width > 768) {
+        textareaRef.current?.focus();
+      }
+    },
+    [width],
+  );
+
+  const removeScrapeOptions = useCallback(() => {
+    setScrapeOptions(null);
+  }, []);
 
   const uploadFile = async (file: File) => {
     const formData = new FormData();
@@ -276,6 +358,15 @@ function PureMultimodalInput({
         </div>
       )}
 
+      {scrapeOptions && (
+        <div className="flex flex-row gap-2 items-center">
+          <ScrapingBadge
+            options={scrapeOptions}
+            onRemove={removeScrapeOptions}
+          />
+        </div>
+      )}
+
       <Textarea
         data-testid="multimodal-input"
         ref={textareaRef}
@@ -305,8 +396,12 @@ function PureMultimodalInput({
         }}
       />
 
-      <div className="absolute bottom-0 p-2 w-fit flex flex-row justify-start">
+      <div className="absolute bottom-0 p-2 w-fit flex flex-row justify-start gap-1">
         <AttachmentsButton fileInputRef={fileInputRef} status={status} />
+        <ScrapingPopover
+          onScrape={handleScrape}
+          disabled={status !== 'ready'}
+        />
       </div>
 
       <div className="absolute bottom-0 right-0 p-2 w-fit flex flex-row justify-end">

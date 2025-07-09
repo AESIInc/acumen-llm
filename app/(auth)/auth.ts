@@ -7,6 +7,7 @@ import { DUMMY_PASSWORD } from '@/lib/constants';
 import type { DefaultJWT } from 'next-auth/jwt';
 
 export type UserType = 'guest' | 'regular';
+export const type: string = "UntrustedHost";
 
 declare module 'next-auth' {
   interface Session extends DefaultSession {

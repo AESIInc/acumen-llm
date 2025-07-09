@@ -3,6 +3,7 @@ import React, { memo } from 'react';
 import ReactMarkdown, { type Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { CodeBlock } from './code-block';
+import { ScreenshotPreview } from './screenshot-preview';
 
 const components: Partial<Components> = {
   // @ts-expect-error
@@ -89,6 +90,27 @@ const components: Partial<Components> = {
       <h6 className="text-sm font-semibold mt-6 mb-2" {...props}>
         {children}
       </h6>
+    );
+  },
+  img: ({ node, src, alt, ...props }) => {
+    // Check if this is a Firecrawl screenshot based on the URL pattern
+    const isFirecrawlScreenshot =
+      src?.includes('firecrawl') || alt?.includes('Screenshot');
+
+    if (isFirecrawlScreenshot && src) {
+      return <ScreenshotPreview src={src} alt={alt || 'Screenshot'} />;
+    }
+
+    // Default image handling
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      // biome-ignore lint/a11y/useAltText: <explanation>
+      <img
+        src={src}
+        alt={alt || 'Image'}
+        className="max-w-full h-auto rounded-lg my-4"
+        {...props}
+      />
     );
   },
 };

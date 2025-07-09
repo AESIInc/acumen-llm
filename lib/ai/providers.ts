@@ -4,30 +4,38 @@ import {
   wrapLanguageModel,
 } from 'ai';
 import { google } from '@ai-sdk/google';
+import { openai } from '@ai-sdk/openai';
 import {
   artifactModel,
   chatModel,
   reasoningModel,
   titleModel,
+  secureChatModel,
 } from './models.test';
 import { isTestEnvironment } from '../constants';
 
 export const myProvider = isTestEnvironment
   ? customProvider({
       languageModels: {
-        'chat-model': chatModel,
-        'chat-model-reasoning': reasoningModel,
-        'title-model': titleModel,
-        'artifact-model': artifactModel,
+        'cloud-chat-model': chatModel,
+        'cloud-chat-model-reasoning': reasoningModel,
+        'cloud-title-model': titleModel,
+        'cloud-artifact-model': artifactModel,
+        'secure-chat-model': secureChatModel,
       },
     })
   : customProvider({
       languageModels: {
-        'secure-model-lite': google('gemini-2.5-flash'),
-        'secure-model-pro': google('gemini-2.5-pro'),
-        'cloud-model-gemini-flash': google('gemini-2.5-flash'),
-        'cloud-model-gemini-pro': google('gemini-2.5-pro'),
-        'title-model': google('gemini-2.5-flash'),
-        'artifact-model': google('gemini-2.5-flash'),
+        'cloud-chat-model': openai('gpt-4.1-mini'),
+        'cloud-chat-model-reasoning': wrapLanguageModel({
+          model: google('gemini-2.5-pro'),
+          middleware: extractReasoningMiddleware({ tagName: 'think' }),
+        }),
+        'secure-chat-model': openai('gpt-4.1'),
+        'cloud-title-model': openai('gpt-4.1-nano'),
+        'cloud-artifact-model': openai('gpt-4.1-mini'),
+      },
+      imageModels: {
+        'cloud-small-model': openai.imageModel('gpt-4o'),
       },
     });

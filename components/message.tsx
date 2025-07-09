@@ -9,6 +9,7 @@ import { Markdown } from './markdown';
 import { MessageActions } from './message-actions';
 import { PreviewAttachment } from './preview-attachment';
 import { Weather } from './weather';
+import { ScrapingMessage } from './scraping-message';
 import equal from 'fast-deep-equal';
 import { cn, sanitizeText } from '@/lib/utils';
 import { Button } from './ui/button';
@@ -16,9 +17,19 @@ import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 import { MessageEditor } from './message-editor';
 import { DocumentPreview } from './document-preview';
 import { MessageReasoning } from './message-reasoning';
+import { ScrollArea } from './ui/scroll-area';
 import type { UseChatHelpers } from '@ai-sdk/react';
 import type { ChatMessage } from '@/lib/types';
 import { useDataStream } from './data-stream-provider';
+import {
+  AITool,
+  AIToolHeader,
+  AIToolContent,
+  AIToolParameters,
+  AIToolResult,
+  type AIToolStatus,
+} from './ui/kibo-ui/ai/tool';
+import { ScreenshotPreview } from './screenshot-preview';
 
 // Type narrowing is handled by TypeScript's control flow analysis
 // The AI SDK provides proper discriminated unions for tool calls
@@ -50,11 +61,15 @@ const PurePreviewMessage = ({
 
   useDataStream();
 
+  // Collect tool results for display at the bottom
+  const toolResults: JSX.Element[] = [];
+  const screenshotPreviews: JSX.Element[] = [];
+
   return (
     <AnimatePresence>
       <motion.div
         data-testid={`message-${message.role}`}
-        className="w-full mx-auto max-w-3xl px-4 group/message"
+        className="w-full mx-auto max-w-5xl px-4 group/message"
         initial={{ y: 5, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         data-role={message.role}
@@ -142,7 +157,18 @@ const PurePreviewMessage = ({
                             message.role === 'user',
                         })}
                       >
-                        <Markdown>{sanitizeText(part.text)}</Markdown>
+                        {message.role === 'user' ? (
+                          <ScrapingMessage text={sanitizeText(part.text)} />
+                        ) : (
+                          <Markdown>
+                            {sanitizeText(
+                              part.text.replace(
+                                /\n\n\*\*Screenshot Preview:\*\*\n\n\[\!\[Screenshot[^\]]*\]\([^)]+\)\]\([^)]+\)\n\n\*Click the image above to view the full screenshot in a new tab\*/g,
+                                '',
+                              ),
+                            )}
+                          </Markdown>
+                        )}
                       </div>
                     </div>
                   );
@@ -307,7 +333,117 @@ const PurePreviewMessage = ({
                   );
                 }
               }
+
+              if (type === 'tool-getScrape') {
+                const { toolCallId, state } = part;
+
+                if (state === 'input-available') {
+                  const { input } = part as any; // Type assertion to handle discriminated union
+                  return (
+                    <div
+                      key={toolCallId}
+                      className="p-3 bg-blue-50 dark:bg-blue-950 rounded-lg border border-blue-200 dark:border-blue-800"
+                    >
+                      <div className="flex items-center gap-2 text-blue-700 dark:text-blue-300 text-sm font-medium mb-2">
+                        <div className="size-4 bg-blue-500 rounded-full animate-pulse" />
+                        Scraping{' '}
+                        {input?.action === 'search'
+                          ? `search results for "${input.topic}"`
+                          : `content from ${input?.url}`}
+                      </div>
+                      <div className="text-xs text-blue-600 dark:text-blue-400">
+                        {input?.action} • {input?.formats?.join(', ')} •{' '}
+                        {input?.screenshot !== 'none'
+                          ? 'with screenshot'
+                          : 'no screenshot'}
+                      </div>
+                    </div>
+                  );
+                }
+
+                if (state === 'output-available') {
+                  const { output } = part as any; // Type assertion to handle discriminated union
+
+                  if (
+                    output &&
+                    typeof output === 'object' &&
+                    'error' in output
+                  ) {
+                    return (
+                      <div
+                        key={toolCallId}
+                        className="text-red-500 p-3 border border-red-200 dark:border-red-800 rounded-lg bg-red-50 dark:bg-red-950"
+                      >
+                        <div className="font-medium mb-1">Scraping Error</div>
+                        <div className="text-sm">{String(output.error)}</div>
+                      </div>
+                    );
+                  }
+
+                  // Extract screenshot URL from the output
+                  const outputStr = String(output);
+                  const screenshotMatch = outputStr.match(
+                    /!\[Screenshot[^\]]*\]\(([^)]+)\)/,
+                  );
+                  const screenshotUrl = screenshotMatch
+                    ? screenshotMatch[1]
+                    : null;
+
+                  // Remove screenshot markdown from the main content for the tool result
+                  const contentWithoutScreenshot = outputStr.replace(
+                    /\n\n\*\*Screenshot Preview:\*\*\n\n\[\!\[Screenshot[^\]]*\]\([^)]+\)\]\([^)]+\)\n\n\*Click the image above to view the full screenshot in a new tab\*/,
+                    '',
+                  );
+
+                  // Add tool result to be shown at bottom
+                  toolResults.push(
+                    <AITool key={`tool-${toolCallId}`} defaultOpen={false}>
+                      <AIToolHeader
+                        status="completed"
+                        name="Web Scraping"
+                        description="View detailed scraping results"
+                      />
+                      <AIToolContent>
+                        <AIToolParameters
+                          parameters={{
+                            url: (part as any).input?.url || 'N/A',
+                            action: (part as any).input?.action || 'scrape',
+                            formats: (part as any).input?.formats || [
+                              'markdown',
+                            ],
+                            screenshot:
+                              (part as any).input?.screenshot || 'none',
+                            maxAge: (part as any).input?.maxAge || 86400000,
+                          }}
+                        />
+                        <AIToolResult
+                          result={
+                            <ScrollArea className="h-[800px] w-full">
+                              <div className="prose prose-sm max-w-none dark:prose-invert pr-4">
+                                <Markdown>{contentWithoutScreenshot}</Markdown>
+                              </div>
+                            </ScrollArea>
+                          }
+                        />
+                      </AIToolContent>
+                    </AITool>,
+                  );
+
+                  // Don't return anything here - we'll show the results at the bottom
+                  return null;
+                }
+              }
             })}
+
+            {/* Show screenshot previews after main content */}
+            {screenshotPreviews.length > 0 && (
+              <div className="space-y-4">{screenshotPreviews}</div>
+            )}
+
+            {/* Show tool results at the bottom for assistant messages */}
+            {message.role === 'assistant' && toolResults.length > 0 && (
+              <div className="space-y-4 mt-4">{toolResults}</div>
+            )}
 
             {!isReadonly && (
               <MessageActions

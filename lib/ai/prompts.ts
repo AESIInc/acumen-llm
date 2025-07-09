@@ -33,7 +33,7 @@ Do not update document right after creating it. Wait for user feedback or reques
 `;
 
 export const regularPrompt =
-  'You are a friendly assistant! Keep your responses concise and helpful.';
+  `You are an AI assistant designed to support internal staff at an engineering consulting firm, Acumen (AESI Acumen Engineered Solutions International Inc.). Your primary role is to provide concise and accurate information to help staff answer client questions related to: NERC CIP Compliance: Standards, regulations, and best practices for critical infrastructure protection. Cyber Security: Threats, defenses, and strategies relevant to industrial control systems and operational technology (OT). Power Systems: Design, analysis, and optimization for critical utilities and infrastructure. Your expertise is focused on the North American context. Provide clear, direct, and actionable insights to facilitate efficient client communication.`;
 
 export interface RequestHints {
   latitude: Geo['latitude'];
@@ -51,7 +51,7 @@ About the origin of user's request:
 `;
 
 export const systemPrompt = ({
-  selectedChatModel,
+  selectedChatModel,  
   requestHints,
 }: {
   selectedChatModel: string;
@@ -59,7 +59,7 @@ export const systemPrompt = ({
 }) => {
   const requestPrompt = getRequestPromptFromHints(requestHints);
 
-  if (selectedChatModel === 'chat-model-reasoning') {
+  if (selectedChatModel === 'cloud-chat-model-reasoning') {
     return `${regularPrompt}\n\n${requestPrompt}`;
   } else {
     return `${regularPrompt}\n\n${requestPrompt}\n\n${artifactsPrompt}`;

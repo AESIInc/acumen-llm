@@ -23,6 +23,7 @@ import { createDocument } from '@/lib/ai/tools/create-document';
 import { updateDocument } from '@/lib/ai/tools/update-document';
 import { requestSuggestions } from '@/lib/ai/tools/request-suggestions';
 import { getWeather } from '@/lib/ai/tools/get-weather';
+import { getScrape } from '@/lib/ai/tools/get-scrape';
 import { isProductionEnvironment } from '@/lib/constants';
 import { myProvider } from '@/lib/ai/providers';
 import { entitlementsByUserType } from '@/lib/ai/entitlements';
@@ -157,10 +158,11 @@ export async function POST(request: Request) {
           messages: convertToModelMessages(uiMessages),
           stopWhen: stepCountIs(5),
           experimental_activeTools:
-            selectedChatModel === 'secure-model-pro'
+            selectedChatModel === 'chat-model-reasoning'
               ? []
               : [
                   'getWeather',
+                  'getScrape',
                   'createDocument',
                   'updateDocument',
                   'requestSuggestions',
@@ -168,6 +170,7 @@ export async function POST(request: Request) {
           experimental_transform: smoothStream({ chunking: 'word' }),
           tools: {
             getWeather,
+            getScrape,
             createDocument: createDocument({ session, dataStream }),
             updateDocument: updateDocument({ session, dataStream }),
             requestSuggestions: requestSuggestions({
@@ -222,12 +225,22 @@ export async function POST(request: Request) {
     if (error instanceof ChatSDKError) {
       return error.toResponse();
     }
-    
-    // Log the error for debugging
-    console.error('Unexpected error in chat API:', error);
-    
-    // Return a generic error response for any other errors
-    return new ChatSDKError('bad_request:api').toResponse();
+
+    console.error('Unexpected error in chat route:', error);
+
+    // For development, return more detailed error information
+    if (process.env.NODE_ENV === 'development') {
+      return Response.json(
+        {
+          error: 'Internal server error',
+          message: error instanceof Error ? error.message : 'Unknown error',
+          stack: error instanceof Error ? error.stack : undefined,
+        },
+        { status: 500 },
+      );
+    }
+
+    return new ChatSDKError('offline:chat').toResponse();
   }
 }
 

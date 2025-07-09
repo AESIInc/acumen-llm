@@ -18,10 +18,12 @@ import {
 import Link from 'next/link';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 import Image from 'next/image';
+import { useTheme } from 'next-themes';
 
 export function AppSidebar({ user }: { user: User | undefined }) {
   const router = useRouter();
   const { setOpenMobile } = useSidebar();
+  const theme = useTheme();
 
   return (
     <Sidebar className="group-data-[side=left]:border-r-0">
@@ -36,7 +38,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
               className="flex flex-row gap-3 items-center"
             >
               <Image
-                src="https://www.aesi-inc.com/AesiLogo/TRANSPARENT-LANDSCAPE-WHITE.svg"
+                src={theme.theme === 'dark' ? "https://www.aesi-inc.com/AesiLogo/TRANSPARENT-LANDSCAPE-WHITE.svg" : "https://www.aesi-inc.com/AesiLogo/TRANSPARENT-LANDSCAPE-COLOUR.svg"}
                 alt="Logo"
                 width={125}
                 height={65}
