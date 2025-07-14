@@ -1,6 +1,5 @@
 'use client';
 
-import type { User } from 'next-auth';
 import { useRouter } from 'next/navigation';
 
 import { PlusIcon } from '@/components/icons';
@@ -19,6 +18,7 @@ import Link from 'next/link';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 import Image from 'next/image';
 import { useTheme } from 'next-themes';
+import type { User } from '@/lib/types';
 
 export function AppSidebar({ user }: { user: User | undefined }) {
   const router = useRouter();
