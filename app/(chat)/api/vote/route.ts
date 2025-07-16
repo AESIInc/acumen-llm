@@ -1,68 +1,58 @@
-import { auth } from '@/app/(auth)/auth';
+import { createClient } from '@/lib/supabase/server';
 import { getChatById, getVotesByChatId, voteMessage } from '@/lib/db/queries';
-import { ChatSDKError } from '@/lib/errors';
+import { NextRequest } from 'next/server';
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const chatId = searchParams.get('chatId');
 
   if (!chatId) {
-    return new ChatSDKError(
-      'bad_request:api',
-      'Parameter chatId is required.',
-    ).toResponse();
+    return Response.json({ error: 'Missing chatId' }, { status: 400 });
   }
 
-  const session = await auth();
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
 
-  if (!session?.user) {
-    return new ChatSDKError('unauthorized:vote').toResponse();
+  if (!user) {
+    return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const chat = await getChatById({ id: chatId });
 
   if (!chat) {
-    return new ChatSDKError('not_found:chat').toResponse();
+    return Response.json({ error: 'Chat not found' }, { status: 404 });
   }
 
-  if (chat.userId !== session.user.id) {
-    return new ChatSDKError('forbidden:vote').toResponse();
+  if (chat.userId !== user.id) {
+    return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const votes = await getVotesByChatId({ id: chatId });
-
-  return Response.json(votes, { status: 200 });
+  return Response.json(votes);
 }
 
-export async function PATCH(request: Request) {
-  const {
-    chatId,
-    messageId,
-    type,
-  }: { chatId: string; messageId: string; type: 'up' | 'down' } =
-    await request.json();
+export async function PATCH(request: NextRequest) {
+  const { chatId, messageId, type } = await request.json();
 
   if (!chatId || !messageId || !type) {
-    return new ChatSDKError(
-      'bad_request:api',
-      'Parameters chatId, messageId, and type are required.',
-    ).toResponse();
+    return Response.json({ error: 'Missing required fields' }, { status: 400 });
   }
 
-  const session = await auth();
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
 
-  if (!session?.user) {
-    return new ChatSDKError('unauthorized:vote').toResponse();
+  if (!user) {
+    return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const chat = await getChatById({ id: chatId });
 
   if (!chat) {
-    return new ChatSDKError('not_found:vote').toResponse();
+    return Response.json({ error: 'Chat not found' }, { status: 404 });
   }
 
-  if (chat.userId !== session.user.id) {
-    return new ChatSDKError('forbidden:vote').toResponse();
+  if (chat.userId !== user.id) {
+    return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   await voteMessage({
@@ -71,5 +61,5 @@ export async function PATCH(request: Request) {
     type: type,
   });
 
-  return new Response('Message voted', { status: 200 });
+  return Response.json({ success: true });
 }

@@ -1,37 +1,26 @@
-import { auth } from '@/app/(auth)/auth';
+import { createClient } from '@/lib/supabase/server';
 import { getSuggestionsByDocumentId } from '@/lib/db/queries';
-import { ChatSDKError } from '@/lib/errors';
+import { NextRequest } from 'next/server';
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const documentId = searchParams.get('documentId');
 
   if (!documentId) {
-    return new ChatSDKError(
-      'bad_request:api',
-      'Parameter documentId is required.',
-    ).toResponse();
+    return Response.json({ error: 'Missing documentId' }, { status: 400 });
   }
 
-  const session = await auth();
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
 
-  if (!session?.user) {
-    return new ChatSDKError('unauthorized:suggestions').toResponse();
+  if (!user) {
+    return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const suggestions = await getSuggestionsByDocumentId({
-    documentId,
-  });
+  const suggestions = await getSuggestionsByDocumentId({ documentId });
+  
+  // Filter suggestions to only those belonging to the current user
+  const userSuggestions = suggestions.filter(suggestion => suggestion.userId === user.id);
 
-  const [suggestion] = suggestions;
-
-  if (!suggestion) {
-    return Response.json([], { status: 200 });
-  }
-
-  if (suggestion.userId !== session.user.id) {
-    return new ChatSDKError('forbidden:api').toResponse();
-  }
-
-  return Response.json(suggestions, { status: 200 });
+  return Response.json(userSuggestions);
 }

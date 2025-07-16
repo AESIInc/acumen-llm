@@ -1,68 +1,56 @@
-import { put } from '@vercel/blob';
-import { NextResponse } from 'next/server';
+import { writeFile } from 'fs/promises';
+import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import { createClient } from '@/lib/supabase/server';
 
-import { auth } from '@/app/(auth)/auth';
-
-// Use Blob instead of File since File is not available in Node.js environment
 const FileSchema = z.object({
   file: z
-    .instanceof(Blob)
-    .refine((file) => file.size <= 5 * 1024 * 1024, {
-      message: 'File size should be less than 5MB',
-    })
-    // Update the file type based on the kind of files you want to accept
-    .refine((file) => ['image/jpeg', 'image/png'].includes(file.type), {
-      message: 'File type should be JPEG or PNG',
-    }),
+    .instanceof(File)
+    .refine((file) => file.size <= 5 * 1024 * 1024, 'File size must be less than 5MB')
+    .refine(
+      (file) => ['image/jpeg', 'image/png', 'image/webp'].includes(file.type),
+      'File must be a JPEG, PNG, or WebP image'
+    ),
 });
 
-export async function POST(request: Request) {
-  const session = await auth();
-
-  if (!session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  if (request.body === null) {
-    return new Response('Request body is empty', { status: 400 });
-  }
-
+export async function POST(request: NextRequest) {
   try {
-    const formData = await request.formData();
-    const file = formData.get('file') as Blob;
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
 
-    if (!file) {
-      return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    const formData = await request.formData();
+    const file = formData.get('file') as File;
 
     const validatedFile = FileSchema.safeParse({ file });
-
     if (!validatedFile.success) {
-      const errorMessage = validatedFile.error.errors
-        .map((error) => error.message)
-        .join(', ');
-
-      return NextResponse.json({ error: errorMessage }, { status: 400 });
+      return NextResponse.json(
+        { error: validatedFile.error.issues[0].message },
+        { status: 400 }
+      );
     }
 
-    // Get filename from formData since Blob doesn't have name property
-    const filename = (formData.get('file') as File).name;
-    const fileBuffer = await file.arrayBuffer();
+    const bytes = await file.arrayBuffer();
+    const buffer = Buffer.from(bytes);
 
-    try {
-      const data = await put(`${filename}`, fileBuffer, {
-        access: 'public',
-      });
+    const filename = `${Date.now()}-${file.name}`;
+    const path = `./public/uploads/${filename}`;
 
-      return NextResponse.json(data);
-    } catch (error) {
-      return NextResponse.json({ error: 'Upload failed' }, { status: 500 });
-    }
+    await writeFile(path, buffer);
+
+    return NextResponse.json({ 
+      message: 'File uploaded successfully',
+      filename,
+      url: `/uploads/${filename}`
+    });
   } catch (error) {
+    console.error('Upload error:', error);
     return NextResponse.json(
-      { error: 'Failed to process request' },
-      { status: 500 },
+      { error: 'Internal server error' },
+      { status: 500 }
     );
   }
 }

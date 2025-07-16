@@ -12,8 +12,6 @@ import { MultimodalInput } from './multimodal-input';
 import { Messages } from './messages';
 import type { VisibilityType } from './visibility-selector';
 import { useArtifactSelector } from '@/hooks/use-artifact';
-import { unstable_serialize } from 'swr/infinite';
-import { getChatHistoryPaginationKey } from './sidebar-history';
 import { toast } from './toast';
 import type { Session } from 'next-auth';
 import { useSearchParams } from 'next/navigation';
@@ -82,7 +80,8 @@ export function Chat({
       setDataStream((ds) => (ds ? [...ds, dataPart] : []));
     },
     onFinish: () => {
-      mutate(unstable_serialize(getChatHistoryPaginationKey));
+      // Invalidate the chat history cache
+      mutate('/api/history');
     },
     onError: (error) => {
       if (error instanceof ChatSDKError) {

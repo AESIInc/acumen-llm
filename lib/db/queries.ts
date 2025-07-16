@@ -16,9 +16,9 @@ import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 
 import {
-  user,
+  profiles,
   chat,
-  type User,
+  type Profile,
   document,
   type Suggestion,
   suggestion,
@@ -30,7 +30,6 @@ import {
 } from './schema';
 import type { ArtifactKind } from '@/components/artifact';
 import { generateUUID } from '../utils';
-import { generateHashedPassword } from './utils';
 import type { VisibilityType } from '@/components/visibility-selector';
 import { ChatSDKError } from '../errors';
 
@@ -42,43 +41,8 @@ import { ChatSDKError } from '../errors';
 const client = postgres(process.env.POSTGRES_URL!);
 const db = drizzle(client);
 
-export async function getUser(email: string): Promise<Array<User>> {
-  try {
-    return await db.select().from(user).where(eq(user.email, email));
-  } catch (error) {
-    throw new ChatSDKError(
-      'bad_request:database',
-      'Failed to get user by email',
-    );
-  }
-}
-
-export async function createUser(email: string, password: string) {
-  const hashedPassword = generateHashedPassword(password);
-
-  try {
-    return await db.insert(user).values({ email, password: hashedPassword });
-  } catch (error) {
-    throw new ChatSDKError('bad_request:database', 'Failed to create user');
-  }
-}
-
-export async function createGuestUser() {
-  const email = `guest-${Date.now()}`;
-  const password = generateHashedPassword(generateUUID());
-
-  try {
-    return await db.insert(user).values({ email, password }).returning({
-      id: user.id,
-      email: user.email,
-    });
-  } catch (error) {
-    throw new ChatSDKError(
-      'bad_request:database',
-      'Failed to create guest user',
-    );
-  }
-}
+// Remove user-related functions since we're using Supabase Auth + profiles
+// The user management is now handled by Supabase Auth directly
 
 export async function saveChat({
   id,
@@ -195,6 +159,58 @@ export async function getChatsByUserId({
     throw new ChatSDKError(
       'bad_request:database',
       'Failed to get chats by user id',
+    );
+  }
+}
+
+// Optional: Add a helper function to get user profile information
+export async function getUserProfile({ id }: { id: string }) {
+  try {
+    const [profile] = await db
+      .select()
+      .from(profiles)
+      .where(eq(profiles.id, id));
+    return profile;
+  } catch (error) {
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to get user profile',
+    );
+  }
+}
+
+// Optional: Get chats with user profile information
+export async function getChatsByUserIdWithProfile({
+  id,
+  limit,
+  startingAfter,
+  endingBefore,
+}: {
+  id: string;
+  limit: number;
+  startingAfter: string | null;
+  endingBefore: string | null;
+}) {
+  try {
+    const { chats, hasMore } = await getChatsByUserId({
+      id,
+      limit,
+      startingAfter,
+      endingBefore,
+    });
+
+    // Get user profile for additional context
+    const profile = await getUserProfile({ id });
+
+    return {
+      chats,
+      hasMore,
+      userProfile: profile,
+    };
+  } catch (error) {
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to get chats with user profile',
     );
   }
 }

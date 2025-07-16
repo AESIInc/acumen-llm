@@ -3,8 +3,6 @@
 import { z } from 'zod';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import { createUser, getUser, createGuestUser } from '@/lib/db/queries';
-import { generateUUID } from '@/lib/utils';
 
 const authFormSchema = z.object({
   email: z.string().email(),
@@ -24,11 +22,6 @@ export interface RegisterActionState {
     | 'failed'
     | 'user_exists'
     | 'invalid_data';
-  error?: string;
-}
-
-export interface GuestActionState {
-  status: 'idle' | 'in_progress' | 'success' | 'failed';
   error?: string;
 }
 
@@ -84,36 +77,38 @@ export const register = async (
 
     const supabase = await createClient();
 
-    // Check if user already exists in our database
-    const existingUsers = await getUser(validatedData.email);
-    if (existingUsers.length > 0) {
-      return { 
-        status: 'user_exists',
-        error: 'A user with this email already exists'
-      };
-    }
-
-    // Create user in Supabase
+    // Create user in Supabase Auth
     const { data, error } = await supabase.auth.signUp({
       email: validatedData.email,
       password: validatedData.password,
     });
 
     if (error) {
+      // Handle specific Supabase Auth errors
+      if (error.message.includes('already registered')) {
+        return { 
+          status: 'user_exists',
+          error: 'A user with this email already exists'
+        };
+      }
+      
       return { 
         status: 'failed',
         error: error.message 
       };
     }
 
-    // If user creation was successful, create user in our database
+    // If user is created successfully, create profile entry
     if (data.user) {
       try {
-        await createUser(validatedData.email, validatedData.password);
+        await supabase.from('profiles').insert({
+          id: data.user.id,
+          full_name: data.user.email?.split('@')[0] || 'User',
+          // Add other default values as needed
+        });
       } catch (dbError) {
-        // If database creation fails, we should handle this gracefully
-        console.error('Failed to create user in database:', dbError);
-        // The user is still created in Supabase, so we can continue
+        console.error('Failed to create user profile:', dbError);
+        // Continue anyway as the user is created in Auth
       }
     }
 
@@ -129,41 +124,6 @@ export const register = async (
     return { 
       status: 'failed',
       error: 'An unexpected error occurred'
-    };
-  }
-};
-
-export const createGuest = async (
-  _: GuestActionState,
-): Promise<GuestActionState> => {
-  try {
-    const supabase = await createClient();
-
-    // Sign in anonymously with Supabase
-    const { data, error } = await supabase.auth.signInAnonymously();
-
-    if (error) {
-      return { 
-        status: 'failed',
-        error: error.message 
-      };
-    }
-
-    // Create guest user in our database
-    if (data.user) {
-      try {
-        await createGuestUser();
-      } catch (dbError) {
-        console.error('Failed to create guest user in database:', dbError);
-        // Continue anyway as the anonymous session is created
-      }
-    }
-
-    return { status: 'success' };
-  } catch (error) {
-    return { 
-      status: 'failed',
-      error: 'Failed to create guest session'
     };
   }
 };
@@ -188,16 +148,51 @@ export const getCurrentSession = async () => {
   return session;
 };
 
-// Helper function to determine user type
-export const getUserType = async (): Promise<'guest' | 'regular' | null> => {
-  const user = await getCurrentUser();
+// Helper function to get current user profile
+export const getCurrentUserProfile = async () => {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  
   if (!user) return null;
   
-  // Anonymous users are guests
-  if (user.is_anonymous) return 'guest';
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', user.id)
+    .single();
+    
+  return profile;
+};
+
+// Helper function to ensure user has a profile
+export const ensureUserProfile = async () => {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
   
-  // Users with email are regular users
-  if (user.email) return 'regular';
+  if (!user) return null;
   
-  return null;
-}; 
+  // Check if profile exists
+  const { data: existingProfile } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', user.id)
+    .single();
+    
+  if (!existingProfile) {
+    // Create profile if it doesn't exist
+    const { data: newProfile } = await supabase
+      .from('profiles')
+      .insert({
+        id: user.id,
+        full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
+        avatar_url: user.user_metadata?.avatar_url,
+        // Add other default values as needed
+      })
+      .select()
+      .single();
+      
+    return newProfile;
+  }
+  
+  return existingProfile;
+};

@@ -33,17 +33,15 @@ export async function updateSession(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  // If no user and not on auth pages, redirect to guest route
+  // If no user and not on auth pages, redirect to login
   if (
     !user &&
     !request.nextUrl.pathname.startsWith('/auth') &&
     !request.nextUrl.pathname.startsWith('/api/auth')
   ) {
-    // Redirect to guest route which will create an anonymous session
-    const redirectUrl = encodeURIComponent(request.url)
+    // Redirect to login page
     const url = request.nextUrl.clone()
-    url.pathname = '/api/auth/guest'
-    url.searchParams.set('redirectUrl', redirectUrl)
+    url.pathname = '/auth/login'
     return NextResponse.redirect(url)
   }
 

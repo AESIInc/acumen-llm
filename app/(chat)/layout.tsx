@@ -2,7 +2,7 @@ import { cookies } from 'next/headers';
 
 import { AppSidebar } from '@/components/app-sidebar';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
-import { getCurrentUser, getUserType } from '@/app/(auth)/actions';
+import { getCurrentUser } from '@/app/(auth)/actions';
 import Script from 'next/script';
 import { DataStreamProvider } from '@/components/data-stream-provider';
 
@@ -11,9 +11,8 @@ export default async function Layout({
 }: {
   children: React.ReactNode;
 }) {
-  const [user, userType, cookieStore] = await Promise.all([
+  const [user, cookieStore] = await Promise.all([
     getCurrentUser(),
-    getUserType(),
     cookies()
   ]);
   
@@ -22,8 +21,8 @@ export default async function Layout({
   // Create a user object that matches the expected format
   const userSession = user ? {
     id: user.id,
-    email: user.email || `guest-${user.id}`,
-    type: userType || 'guest',
+    email: user.email || 'User',
+    type: 'regular' as const,
   } : undefined;
 
   return (

@@ -9,27 +9,32 @@ import {
   primaryKey,
   foreignKey,
   boolean,
+  numeric,
 } from 'drizzle-orm/pg-core';
 
-export const user = pgTable('User', {
-  id: uuid('id').primaryKey().notNull().defaultRandom(),
-  email: varchar('email', { length: 64 }).notNull(),
-  password: varchar('password', { length: 64 }),
-  supabaseUserId: uuid('supabase_user_id').unique(),
-  userType: varchar('user_type', { enum: ['regular', 'guest'] }).notNull().default('regular'),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+// Define your existing profiles table for Drizzle to understand the structure
+export const profiles = pgTable('profiles', {
+  id: uuid('id').primaryKey().notNull(),
+  full_name: text('full_name'),
+  avatar_url: text('avatar_url'),
+  job_title: text('job_title'),
+  department: text('department'),
+  updated_at: timestamp('updated_at', { withTimezone: true }),
+  created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  latitude: numeric('latitude'),
+  longitude: numeric('longitude'),
 });
 
-export type User = InferSelectModel<typeof user>;
+export type Profile = InferSelectModel<typeof profiles>;
 
+// Remove the user table entirely and update all references
 export const chat = pgTable('Chat', {
   id: uuid('id').primaryKey().notNull().defaultRandom(),
   createdAt: timestamp('createdAt').notNull(),
   title: text('title').notNull(),
   userId: uuid('userId')
     .notNull()
-    .references(() => user.id),
+    .references(() => profiles.id), // Reference profiles table directly
   visibility: varchar('visibility', { enum: ['public', 'private'] })
     .notNull()
     .default('private'),
@@ -38,7 +43,6 @@ export const chat = pgTable('Chat', {
 export type Chat = InferSelectModel<typeof chat>;
 
 // DEPRECATED: The following schema is deprecated and will be removed in the future.
-// Read the migration guide at https://chat-sdk.dev/docs/migration-guides/message-parts
 export const messageDeprecated = pgTable('Message', {
   id: uuid('id').primaryKey().notNull().defaultRandom(),
   chatId: uuid('chatId')
@@ -64,8 +68,6 @@ export const message = pgTable('Message_v2', {
 
 export type DBMessage = InferSelectModel<typeof message>;
 
-// DEPRECATED: The following schema is deprecated and will be removed in the future.
-// Read the migration guide at https://chat-sdk.dev/docs/migration-guides/message-parts
 export const voteDeprecated = pgTable(
   'Vote',
   {
@@ -118,7 +120,7 @@ export const document = pgTable(
       .default('text'),
     userId: uuid('userId')
       .notNull()
-      .references(() => user.id),
+      .references(() => profiles.id), // Reference profiles table
   },
   (table) => {
     return {
@@ -141,7 +143,7 @@ export const suggestion = pgTable(
     isResolved: boolean('isResolved').notNull().default(false),
     userId: uuid('userId')
       .notNull()
-      .references(() => user.id),
+      .references(() => profiles.id), // Reference profiles table
     createdAt: timestamp('createdAt').notNull(),
   },
   (table) => ({

@@ -1,4 +1,4 @@
-import { auth } from '@/app/(auth)/auth';
+import { createClient } from '@/lib/supabase/server';
 import {
   getChatById,
   getMessagesByChatId,
@@ -28,9 +28,10 @@ export async function GET(
     return new ChatSDKError('bad_request:api').toResponse();
   }
 
-  const session = await auth();
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
 
-  if (!session?.user) {
+  if (!user) {
     return new ChatSDKError('unauthorized:chat').toResponse();
   }
 
@@ -46,10 +47,11 @@ export async function GET(
     return new ChatSDKError('not_found:chat').toResponse();
   }
 
-  if (chat.visibility === 'private' && chat.userId !== session.user.id) {
+  if (chat.visibility === 'private' && chat.userId !== user.id) {
     return new ChatSDKError('forbidden:chat').toResponse();
   }
 
+  const messages = await getMessagesByChatId({ id: chatId });
   const streamIds = await getStreamIdsByChatId({ chatId });
 
   if (!streamIds.length) {
@@ -75,7 +77,6 @@ export async function GET(
    * but the resumable stream has concluded at this point.
    */
   if (!stream) {
-    const messages = await getMessagesByChatId({ id: chatId });
     const mostRecentMessage = messages.at(-1);
 
     if (!mostRecentMessage) {
