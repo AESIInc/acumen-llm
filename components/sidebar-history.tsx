@@ -7,6 +7,7 @@ import useSWR from 'swr';
 import { ChatItem } from './sidebar-history-item';
 import { SidebarGroup, SidebarGroupContent, SidebarMenu } from './ui/sidebar';
 import { fetcher } from '@/lib/utils';
+import { deleteChatAction } from '@/app/(chat)/actions';
 
 export interface ChatHistory {
   chats: Array<{
@@ -23,7 +24,7 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
   const { id } = useParams();
   const router = useRouter();
   
-  const { data: history, error } = useSWR<ChatHistory>(
+  const { data: history, error, mutate } = useSWR<ChatHistory>(
     user ? '/api/history' : null,
     fetcher
   );
@@ -53,9 +54,27 @@ export function SidebarHistory({ user }: { user: User | undefined }) {
               key={item.id}
               chat={item}
               isActive={item.id === id}
-              onDelete={(chatId) => {
-                // Handle delete
-                console.log('Delete chat:', chatId);
+              onDelete={async (chatId) => {
+                try {
+                  if (!user?.id) {
+                    throw new Error('User not authenticated');
+                  }
+
+                  await deleteChatAction({
+                    chatId,
+                    userId: user.id,
+                  });
+
+                  // Refresh the chat history
+                  mutate();
+
+                  // Navigate to home if we deleted the current chat
+                  if (chatId === id) {
+                    router.push('/');
+                  }
+                } catch (error) {
+                  console.error('Failed to delete chat:', error);
+                }
               }}
               setOpenMobile={() => {}}
             />

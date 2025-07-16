@@ -6,6 +6,8 @@ import {
   deleteMessagesByChatIdAfterTimestamp,
   getMessageById,
   updateChatVisiblityById,
+  deleteChatById,
+  getChatById,
 } from '@/lib/db/queries';
 import type { VisibilityType } from '@/components/visibility-selector';
 import { myProvider } from '@/lib/ai/providers';
@@ -50,4 +52,32 @@ export async function updateChatVisibility({
   visibility: VisibilityType;
 }) {
   await updateChatVisiblityById({ chatId, visibility });
+}
+
+export async function deleteChatAction({
+  chatId,
+  userId,
+}: {
+  chatId: string;
+  userId: string;
+}) {
+  try {
+    // First verify the chat exists and belongs to the user
+    const chat = await getChatById({ id: chatId });
+    if (!chat) {
+      throw new Error('Chat not found');
+    }
+    
+    if (chat.userId !== userId) {
+      throw new Error('Unauthorized: You can only delete your own chats');
+    }
+
+    // Delete the chat using the existing Drizzle function
+    await deleteChatById({ id: chatId });
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to delete chat:', error);
+    throw new Error(error instanceof Error ? error.message : 'Failed to delete chat');
+  }
 }

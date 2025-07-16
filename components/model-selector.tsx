@@ -28,8 +28,8 @@ export function ModelSelector({
   const [open, setOpen] = useState(false);
   const [optimisticModelId, setOptimisticModelId] =
     useOptimistic(selectedModelId);
-
-  const userType = session.user.type;
+//@ts-ignore
+  const userType = session.user?.type;
   const { availableChatModelIds } = entitlementsByUserType[userType];
 
   const availableChatModels = chatModels.filter((chatModel) =>

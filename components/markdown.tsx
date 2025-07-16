@@ -103,8 +103,8 @@ const components: Partial<Components> = {
 
     // Default image handling
     return (
-      // eslint-disable-next-line @next/next/no-img-element
       // biome-ignore lint/a11y/useAltText: <explanation>
+      // eslint-disable-next-line @next/next/no-img-element
       <img
         src={src}
         alt={alt || 'Image'}

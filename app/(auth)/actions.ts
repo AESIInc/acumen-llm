@@ -9,6 +9,7 @@ const authFormSchema = z.object({
   password: z.string().min(6),
 });
 
+
 export interface LoginActionState {
   status: 'idle' | 'in_progress' | 'success' | 'failed' | 'invalid_data';
   error?: string;

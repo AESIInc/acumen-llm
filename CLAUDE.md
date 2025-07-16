@@ -5,20 +5,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Development Commands
 
 ### Core Commands
-- `pnpm dev` - Start development server with Turbo mode
-- `pnpm build` - Build production application
-- `pnpm start` - Start production server
-- `pnpm lint` - Run Next.js ESLint and Biome linter (auto-fix)
-- `pnpm lint:fix` - Run linting with auto-fix
-- `pnpm format` - Format code with Biome
-- `pnpm test` - Run Playwright end-to-end tests
+- `bun dev` - Start development server with Turbo mode
+- `bun build` - Build production application
+- `bun start` - Start production server
+- `bun lint` - Run Next.js ESLint and Biome linter (auto-fix)
+- `bun lint:fix` - Run linting with auto-fix
+- `bun format` - Format code with Biome
+- `bun test` - Run Playwright end-to-end tests
 
 ### Database Commands
-- `pnpm db:generate` - Generate Drizzle schema
-- `pnpm db:migrate` - Run database migrations
-- `pnpm db:studio` - Open Drizzle Studio
-- `pnpm db:push` - Push schema to database
-- `pnpm db:pull` - Pull schema from database
+- `bun db:generate` - Generate Drizzle schema
+- `bun db:migrate` - Run database migrations
+- `bun db:studio` - Open Drizzle Studio
+- `bun db:push` - Push schema to database
+- `bun db:pull` - Pull schema from database
 
 ### Testing
 - Tests are located in `tests/` directory

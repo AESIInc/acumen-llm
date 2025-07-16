@@ -1,4 +1,4 @@
-import type { UserType } from '@/app/(auth)/auth';
+
 import type { ChatModel } from './models';
 
 interface Entitlements {
@@ -6,7 +6,7 @@ interface Entitlements {
   availableChatModelIds: Array<ChatModel['id']>;
 }
 
-export const entitlementsByUserType: Record<UserType, Entitlements> = {
+export const entitlementsByUserType: Record<string, Entitlements> = {
   /*
    * For users without an account
    */

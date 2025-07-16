@@ -386,8 +386,8 @@ export function ScrapingPopover({ onScrape, disabled }: ScrapingPopoverProps) {
                         <TooltipContent className="max-w-xs">
                           <p>
                             By default, we cache scraped content for 24 hours to
-                            speed up requests by 500%. Check "Disable scrape
-                            caching" to always fetch fresh content (slower but
+                            speed up requests by 500%. Check &quot;Disable scrape
+                            caching&quot; to always fetch fresh content (slower but
                             most current).
                           </p>
                         </TooltipContent>

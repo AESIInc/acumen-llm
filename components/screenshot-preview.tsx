@@ -49,7 +49,7 @@ export function ScreenshotPreview({ src, alt }: ScreenshotPreviewProps) {
     <div className="relative my-4 group">
       {isLoading && (
         <div className="flex items-center justify-center h-48 bg-gray-100 dark:bg-gray-800 rounded-lg">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
+          <div className="animate-spin rounded-full size-8 border-b-2 border-blue-500" />
         </div>
       )}
 
@@ -70,7 +70,7 @@ export function ScreenshotPreview({ src, alt }: ScreenshotPreviewProps) {
               unoptimized
               onLoad={handleImageLoad}
               onError={handleImageError}
-              className="w-full h-full aspect-video object-cover object-top"
+              className="size-full aspect-video object-cover object-top"
             />
           </ImageZoom>
         </div>
@@ -86,7 +86,7 @@ export function ScreenshotPreview({ src, alt }: ScreenshotPreviewProps) {
         </button>
 
         {/* Zoom hint overlay */}
-        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-5 transition-all duration-200 rounded-lg flex items-center justify-center pointer-events-none">
+        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-all duration-200 rounded-lg flex items-center justify-center pointer-events-none">
           <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-white dark:bg-gray-800 px-3 py-2 rounded-md shadow-lg flex items-center gap-2">
             <ZoomIn size={16} />
             <span className="text-sm font-medium">Click to zoom</span>

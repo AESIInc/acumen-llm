@@ -100,7 +100,7 @@ export function ScrapingBadge({ options, onRemove }: ScrapingBadgeProps) {
       <Button
         variant="ghost"
         size="sm"
-        className="h-4 w-4 p-0 hover:bg-blue-300 dark:hover:bg-blue-700"
+        className="size-4 p-0 hover:bg-blue-300 dark:hover:bg-blue-700"
         onClick={(e) => {
           e.stopPropagation();
           onRemove();
